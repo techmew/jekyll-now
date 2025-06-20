@@ -39,15 +39,15 @@ def generate_article(content):
     res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
     
     print(f"HF API status: {res.status_code}")
-    print(f"HF API response: {res.text[:500]}")  # 長すぎない範囲でレスポンスを表示
-    
+    print(f"HF API response: {res.text[:500]}")
+
     if res.status_code != 200:
         raise Exception(f"Hugging Face API failed with status {res.status_code}: {res.text}")
-    
+
     result = res.json()
     if 'error' in result:
         raise Exception(f"Hugging Face API error: {result['error']}")
-    
+
     return result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
 
 web3_text = generate_article(web3_article)
@@ -68,9 +68,10 @@ def generate_image(prompt, filename):
     }
     headers = {"apikey": HORDE_API_KEY, "Content-Type": "application/json"}
     res = requests.post(HORDE_API_URL, headers=headers, json=payload)
-    if res.status_code != 200:
+
+    if res.status_code not in [200, 202]:
         raise Exception(f"Stable Horde API failed with status {res.status_code}: {res.text}")
-    
+
     job = res.json()
     if 'id' not in job:
         raise Exception("Stable Horde API failed to start job")
