@@ -1,50 +1,5 @@
-#
-# This file contains configuration flags to customize your site
-#
-
-# Name of your site (displayed in the header)
-name: Your Name
-
-# Short bio or description (displayed in the header)
-description: Web Developer from Somewhere
-
-# URL of your avatar or profile pic (you could use your GitHub profile pic)
-avatar: https://raw.githubusercontent.com/barryclark/jekyll-now/master/images/jekyll-logo.png
-
-# Footer social links
-footer-links:
-  github: barryclark/jekyll-now
-  twitter: jekyllrb
-
-# Your website URL (for sitemap, feeds etc.)
-url: "https://techmew.github.io"
-
-# If hosted at a project repo
-baseurl: "/jekyll-now"
-
-# URL pattern for posts
-permalink: /:title/
-
-# Markdown processor
-kramdown:
-  input: GFM
-  syntax_highlighter: rouge
-  syntax_highlighter_opts:
-    css_class: 'highlight'
-
-# Sass settings
-sass:
-  style: :expanded
-
-# Plugins
-gems:
-  - jekyll-sitemap
-  - jekyll-feed
-
-# Exclude from production site
-exclude:
-  - Gemfile
-  - Gemfile.lock
-  - LICENSE
-  - README.md
-  - CNAME
+title: Your Blog Title
+description: Your Blog Description
+baseurl: "/jekyll-now" # リポジトリ名に応じて設定
+url: "https://<username>.github.io"
+permalink: /:year/:month/:day/:title
