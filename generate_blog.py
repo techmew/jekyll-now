@@ -21,7 +21,7 @@ web3_article = fetch_latest_article(WEB3_RSS)
 ai_article = fetch_latest_article(AI_RSS)
 
 # ========== Hugging Face 記事生成 ==========
-HF_API_URL = "https://api-inference.huggingface.co/models/bigscience/bloomz-560m"
+HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 
 def generate_article(content):
@@ -36,8 +36,8 @@ def generate_article(content):
 出典: {content["link"]}
 """
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
-    res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt}, timeout=60)
-
+    res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
+    
     print(f"HF API status: {res.status_code}")
     print(f"HF API response: {res.text[:500]}")
 
