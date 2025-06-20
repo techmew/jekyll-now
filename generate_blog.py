@@ -38,14 +38,15 @@ if not HF_API_TOKEN:
 
 def generate_article(content):
     prompt = f"""
-次の内容について日本語で500-800字の記事を作成してください。
-・要約（翻訳含む）
-・私見を300字程度
-・出典リンクを最後に記載
+以下の情報を基に、自然な日本語のブログ記事を書いてください。人間が書いたような、堅苦しくない親しみやすい口調で。記事は以下の構成で、500～800字程度にしてください：
+1. 記事の内容を簡潔に要約（日本語に翻訳）。
+2. この内容についての個人的な感想や考察を加える（約300字）。
+3. 最後に、引用元のリンクを「参考：」として記載。
 
-タイトル: {content["title"]}
-要約元: {content["summary"]}
-出典: {content["link"]}
+**情報**：
+- タイトル: {content["title"]}
+- 要約元: {content["summary"]}
+- 出典リンク: {content["link"]}
 """
     headers = {
         "Authorization": f"Bearer {HF_API_TOKEN}",
@@ -79,8 +80,10 @@ if not HORDE_API_KEY:
     raise Exception("HORDE_API_KEY is empty or not set! Check your GitHub Secrets.")
 
 def generate_image(prompt, filename):
+    # 画像プロンプトをビジュアルに適したものに調整
+    image_prompt = f"A futuristic illustration of {prompt}"
     payload = {
-        "prompt": prompt,
+        "prompt": image_prompt,
         "params": {
             "n": 1,
             "width": 512,
@@ -98,13 +101,16 @@ def generate_image(prompt, filename):
         job_id = job['id']
         print(f"画像生成ジョブID: {job_id}")
         fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
-        while True:
+        max_attempts = 12  # 60秒待機（5秒×12）
+        for _ in range(max_attempts):
             time.sleep(5)
             status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
             status = status_res.json()
             if status.get("done"):
                 break
             print("画像生成中...")
+        else:
+            raise Exception("画像生成がタイムアウトしました")
         if not status.get("generations"):
             raise Exception("画像生成に失敗しました")
         img_url = status["generations"][0]["img"]
@@ -129,9 +135,11 @@ except Exception as e:
 # ========== Markdown保存 ==========
 def save_markdown(filename, title, content, image_path):
     try:
+        # タイトル内の特殊文字をエスケープ
+        escaped_title = title.replace('"', '\\"')
         markdown_content = f"""---
 layout: post
-title: "{title}"
+title: "{escaped_title}"
 date: {datetime.now().strftime('%Y-%m-%d')}
 ---
 
