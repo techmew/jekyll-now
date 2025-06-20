@@ -2,38 +2,30 @@
 # This file contains configuration flags to customize your site
 #
 
-theme: minima
-
 # Name of your site (displayed in the header)
-name: Techmew
+name: Your Name
 
 # Short bio or description (displayed in the header)
-description: AI & Web3 Game Auto Blog
+description: Web Developer from Somewhere
 
-# URL of your avatar or profile pic
+# URL of your avatar or profile pic (you could use your GitHub profile pic)
 avatar: https://raw.githubusercontent.com/barryclark/jekyll-now/master/images/jekyll-logo.png
 
 # Footer social links
 footer-links:
-  github: techmew/techmew.github.io
-  twitter: techmew
+  github: barryclark/jekyll-now
+  twitter: jekyllrb
 
-# URL of your site (optional but recommended for sitemap and feeds)
+# Your website URL (for sitemap, feeds etc.)
 url: "https://techmew.github.io"
 
-# If hosted at a project repo like https://techmew.github.io/jekyll-now
+# If hosted at a project repo
 baseurl: "/jekyll-now"
 
-# Permalink style (URL pattern for posts)
+# URL pattern for posts
 permalink: /:title/
 
-# Disqus shortname (if you use Disqus comments)
-disqus:
-
-# Google Analytics tracking code (if you use GA)
-google_analytics:
-
-# Markdown processor settings
+# Markdown processor
 kramdown:
   input: GFM
   syntax_highlighter: rouge
