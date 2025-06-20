@@ -22,7 +22,7 @@ ai_article = fetch_latest_article(AI_RSS)
 # ========== Hugging Face 無料LLMで記事生成 ==========
 # 例：Hugging Face API (Mistralモデルなど)
 HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
-HF_API_TOKEN = "YOUR_HUGGINGFACE_API_TOKEN"
+HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 
 def generate_article(content, category):
     prompt = f"""
@@ -45,7 +45,7 @@ ai_text = generate_article(ai_article, "ai")
 
 # ========== Stable Hordeで画像生成 ==========
 HORDE_API_URL = "https://stablehorde.net/api/v2/generate/async"
-HORDE_API_KEY = "YOUR_STABLE_HORDE_API_KEY"
+HORDE_API_KEY = os.getenv("HORDE_API_KEY")
 
 def generate_image(prompt, filename):
     payload = {
