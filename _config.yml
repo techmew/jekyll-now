@@ -1,5 +1,7 @@
-title: Your Blog Title
-description: Your Blog Description
-baseurl: "/jekyll-now" # リポジトリ名に応じて設定
+title: AI & Web3 News
+description: Daily updates on AI and Web3 innovations
+baseurl: "" # リポジトリ名に応じて調整（例: "/jekyll-now"）
 url: "https://<username>.github.io"
 permalink: /:year/:month/:day/:title
+markdown: kramdown
+theme: minima
