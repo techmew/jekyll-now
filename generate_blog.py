@@ -24,6 +24,9 @@ ai_article = fetch_latest_article(AI_RSS)
 HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 
+if not HF_API_TOKEN:
+    raise Exception("HF_API_TOKEN is empty or not set! Check your GitHub Secrets.")
+
 def generate_article(content):
     prompt = f"""
 次の内容について日本語で500-800字の記事を作成してください。
@@ -35,7 +38,10 @@ def generate_article(content):
 要約元: {content["summary"]}
 出典: {content["link"]}
 """
-    headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
+    headers = {
+        "Authorization": f"Bearer {HF_API_TOKEN}",
+        "Content-Type": "application/json"
+    }
     res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
 
     print(f"HF API status: {res.status_code}")
@@ -56,6 +62,9 @@ ai_text = generate_article(ai_article)
 # ========== Stable Horde 画像生成 ==========
 HORDE_API_URL = "https://stablehorde.net/api/v2/generate/async"
 HORDE_API_KEY = os.getenv("HORDE_API_KEY")
+
+if not HORDE_API_KEY:
+    raise Exception("HORDE_API_KEY is empty or not set! Check your GitHub Secrets.")
 
 def generate_image(prompt, filename):
     payload = {
