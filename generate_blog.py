@@ -37,7 +37,7 @@ def generate_article(content):
 """
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
     res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
-    
+
     print(f"HF API status: {res.status_code}")
     print(f"HF API response: {res.text[:500]}")
 
@@ -79,7 +79,6 @@ def generate_image(prompt, filename):
     job_id = job['id']
     print(f"画像生成ジョブID: {job_id}")
 
-    # ポーリングで画像ができるのを待つ
     fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
     while True:
         time.sleep(5)
@@ -121,5 +120,3 @@ date: {datetime.now().strftime('%Y-%m-%d')}
 
 save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-web3.md", web3_article["title"], web3_text, web3_img)
 save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-ai.md", ai_article["title"], ai_text, ai_img)
-
-
