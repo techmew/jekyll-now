@@ -1,8 +1,26 @@
 import os
 import feedparser
 import requests
+import re
 from datetime import datetime
 import time
+
+# ========== テキスト後処理 ==========
+def clean_generated_text(text):
+    # 指示文や不要なフレーズを削除
+    unwanted_phrases = [
+        r"次の内容について日本語で.*?",
+        r"要約（翻訳含む）",
+        r"私見を.*?",
+        r"出典リンクを.*?",
+        r"500～800字"
+    ]
+    for phrase in unwanted_phrases:
+        text = re.sub(phrase, "", text, flags=re.MULTILINE)
+    # 英語が混入している場合、警告
+    if re.search(r"[a-zA-Z]{5,}", text):
+        print("警告: 生成テキストに英語が含まれています")
+    return text.strip()
 
 # ========== ニュース取得 ==========
 WEB3_RSS = "https://www.blockchaingamer.biz/feed/"
@@ -38,16 +56,19 @@ if not HF_API_TOKEN:
 
 def generate_article(content):
     prompt = f"""
-以下の情報を基に、自然な日本語のブログ記事を書いてください。人間が書いたような、堅苦しくない親しみやすい口調で。記事は以下の構成で、500～800字程度にしてください：
-1. 記事の内容を簡潔に要約（日本語に翻訳）。
-2. この内容についての個人的な感想や考察を加える（約300字）。
-3. 最後に、引用元のリンクを「参考：」として記載。
+    以下の情報を基に、親しみやすい日本語でブログ記事を書いてください。まるで友人に話すようなカジュアルな口調で、500～800字程度。まず、英語のタイトルと要約を自然な日本語に翻訳し、記事の要点を簡潔にまとめ、次にその話題についてのあなたの考えや感想を自然に述べて、最後に「参考：」と出典リンクを記載してください。指示文や「要約」「感想」といった言葉は記事に含めないでください。
 
-**情報**：
-- タイトル: {content["title"]}
-- 要約元: {content["summary"]}
-- 出典リンク: {content["link"]}
-"""
+    例：
+    タイトル: "AI Revolutionizes Gaming"
+    要約: AIがゲームのキャラクターモーションをリアルタイム生成。
+    記事例: 最近、AIがゲーム開発にすごい影響を与えてるってニュースを見ました！ゲームのキャラがリアルタイムで自然に動く技術が登場して、開発時間がめっちゃ短縮されるらしい。これ、めっちゃ面白いよね！インディーゲームでも大作みたいなクオリティが出せるかも。ただ、AIに頼りすぎるとゲームの魂が薄れちゃうかもね。
+    参考: [リンク]
+
+    情報：
+    タイトル: {content["title"]}
+    要約: {content["summary"]}
+    出典リンク: {content["link"]}
+    """
     headers = {
         "Authorization": f"Bearer {HF_API_TOKEN}",
         "Content-Type": "application/json"
@@ -61,7 +82,8 @@ def generate_article(content):
         result = res.json()
         if 'error' in result:
             raise Exception(f"Hugging Face API error: {result['error']}")
-        return result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
+        generated_text = result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
+        return clean_generated_text(generated_text)
     except Exception as e:
         raise Exception(f"Failed to generate article: {str(e)}")
 
@@ -80,7 +102,6 @@ if not HORDE_API_KEY:
     raise Exception("HORDE_API_KEY is empty or not set! Check your GitHub Secrets.")
 
 def generate_image(prompt, filename):
-    # 画像プロンプトをビジュアルに適したものに調整
     image_prompt = f"A futuristic illustration of {prompt}"
     payload = {
         "prompt": image_prompt,
@@ -101,7 +122,7 @@ def generate_image(prompt, filename):
         job_id = job['id']
         print(f"画像生成ジョブID: {job_id}")
         fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
-        max_attempts = 12  # 60秒待機（5秒×12）
+        max_attempts = 12  # 60秒待機
         for _ in range(max_attempts):
             time.sleep(5)
             status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
@@ -135,7 +156,6 @@ except Exception as e:
 # ========== Markdown保存 ==========
 def save_markdown(filename, title, content, image_path):
     try:
-        # タイトル内の特殊文字をエスケープ
         escaped_title = title.replace('"', '\\"')
         markdown_content = f"""---
 layout: post
