@@ -129,5 +129,25 @@ except Exception as e:
 # ========== Markdown保存 ==========
 def save_markdown(filename, title, content, image_path):
     try:
+        markdown_content = f"""---
+layout: post
+title: "{title}"
+date: {datetime.now().strftime('%Y-%m-%d')}
+---
+
+![記事画像]({image_path})
+
+{content}
+"""
         with open(filename, "w", encoding="utf-8") as f:
-            f.write(f"""---
+            f.write(markdown_content)
+        print(f"Markdown保存済み: {filename}")
+    except Exception as e:
+        raise Exception(f"Failed to save markdown: {str(e)}")
+
+try:
+    save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-web3.md", web3_article["title"], web3_text, web3_img)
+    save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-ai.md", ai_article["title"], ai_text, ai_img)
+except Exception as e:
+    print(f"Error saving markdown: {str(e)}")
+    raise
