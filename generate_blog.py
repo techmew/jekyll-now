@@ -2,7 +2,7 @@ import os
 import feedparser
 import requests
 from datetime import datetime
-import json
+import time
 
 # ========== ニュース取得 ==========
 WEB3_RSS = "https://www.blockchaingamer.biz/feed/"
@@ -20,12 +20,11 @@ def fetch_latest_article(rss_url):
 web3_article = fetch_latest_article(WEB3_RSS)
 ai_article = fetch_latest_article(AI_RSS)
 
-# ========== Hugging Face 無料LLMで記事生成 ==========
-# 例：Hugging Face API (Mistralモデルなど)
+# ========== Hugging Face 記事生成 ==========
 HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 
-def generate_article(content, category):
+def generate_article(content):
     prompt = f"""
 次の内容について日本語で500-800字の記事を作成してください。
 ・要約（翻訳含む）
@@ -37,14 +36,16 @@ def generate_article(content, category):
 出典: {content["link"]}
 """
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
-    response = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
-    result = response.json()
+    res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
+    result = res.json()
+    if 'error' in result:
+        raise Exception(f"Hugging Face API error: {result['error']}")
     return result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
 
-web3_text = generate_article(web3_article, "web3")
-ai_text = generate_article(ai_article, "ai")
+web3_text = generate_article(web3_article)
+ai_text = generate_article(ai_article)
 
-# ========== Stable Hordeで画像生成 ==========
+# ========== Stable Horde 画像生成 ==========
 HORDE_API_URL = "https://stablehorde.net/api/v2/generate/async"
 HORDE_API_KEY = os.getenv("HORDE_API_KEY")
 
@@ -60,13 +61,40 @@ def generate_image(prompt, filename):
     headers = {"apikey": HORDE_API_KEY, "Content-Type": "application/json"}
     res = requests.post(HORDE_API_URL, headers=headers, json=payload)
     job = res.json()
-    # 通常ここで polling が必要（簡易例なのでここまで）
-    print(f"画像生成ジョブID: {job.get('id')}")
-    # ダウンロード処理は別途実装推奨
-    return f"assets/images/{filename}.png"
+    if 'id' not in job:
+        raise Exception("Stable Horde API failed to start job")
 
-web3_img = generate_image(web3_article["title"], datetime.now().strftime("%Y%m%d") + "_web3")
-ai_img = generate_image(ai_article["title"], datetime.now().strftime("%Y%m%d") + "_ai")
+    job_id = job['id']
+    print(f"画像生成ジョブID: {job_id}")
+
+    # ポーリングで画像ができるのを待つ
+    fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
+    while True:
+        time.sleep(5)
+        status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
+        status = status_res.json()
+        if status.get("done"):
+            break
+        print("画像生成中...")
+
+    # 画像のURLを取得
+    gen_res = requests.get(f"https://stablehorde.net/api/v2/generate/status/{job_id}", headers={"apikey": HORDE_API_KEY})
+    gen_data = gen_res.json()
+    if not gen_data.get("generations"):
+        raise Exception("画像生成に失敗しました")
+
+    img_url = gen_data["generations"][0]["img"]
+    img_data = requests.get(img_url).content
+    img_path = f"assets/images/{filename}.png"
+    os.makedirs(os.path.dirname(img_path), exist_ok=True)
+    with open(img_path, "wb") as f:
+        f.write(img_data)
+    print(f"画像保存済み: {img_path}")
+    return img_path
+
+today = datetime.now().strftime("%Y%m%d")
+web3_img = generate_image(web3_article["title"], today + "_web3")
+ai_img = generate_image(ai_article["title"], today + "_ai")
 
 # ========== Markdown保存 ==========
 def save_markdown(filename, title, content, image_path):
