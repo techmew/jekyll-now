@@ -1,7 +1,7 @@
 name: Auto Blog Update
 
 on:
-  workflow_dispatch: # 手動実行トリガー
+  workflow_dispatch:
 
 jobs:
   update-blog:
@@ -16,7 +16,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install feedparser requests beautifulsoup4
+        run: pip install feedparser requests
 
       - name: Run blog generator
         run: python generate_blog.py
