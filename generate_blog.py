@@ -9,16 +9,25 @@ WEB3_RSS = "https://www.blockchaingamer.biz/feed/"
 AI_RSS = "https://venturebeat.com/category/ai/feed/"
 
 def fetch_latest_article(rss_url):
-    feed = feedparser.parse(rss_url)
-    latest = feed.entries[0]
-    return {
-        "title": latest.title,
-        "summary": latest.summary,
-        "link": latest.link
-    }
+    try:
+        feed = feedparser.parse(rss_url)
+        if not feed.entries:
+            raise Exception(f"No entries found in RSS feed: {rss_url}")
+        latest = feed.entries[0]
+        return {
+            "title": latest.title,
+            "summary": latest.summary,
+            "link": latest.link
+        }
+    except Exception as e:
+        raise Exception(f"Failed to fetch RSS feed from {rss_url}: {str(e)}")
 
-web3_article = fetch_latest_article(WEB3_RSS)
-ai_article = fetch_latest_article(AI_RSS)
+try:
+    web3_article = fetch_latest_article(WEB3_RSS)
+    ai_article = fetch_latest_article(AI_RSS)
+except Exception as e:
+    print(f"Error fetching articles: {str(e)}")
+    raise
 
 # ========== Hugging Face 記事生成 ==========
 HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
@@ -42,22 +51,25 @@ def generate_article(content):
         "Authorization": f"Bearer {HF_API_TOKEN}",
         "Content-Type": "application/json"
     }
-    res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
+    try:
+        res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
+        print(f"HF API status: {res.status_code}")
+        print(f"HF API response: {res.text[:500]}")
+        if res.status_code != 200:
+            raise Exception(f"Hugging Face API failed with status {res.status_code}: {res.text}")
+        result = res.json()
+        if 'error' in result:
+            raise Exception(f"Hugging Face API error: {result['error']}")
+        return result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
+    except Exception as e:
+        raise Exception(f"Failed to generate article: {str(e)}")
 
-    print(f"HF API status: {res.status_code}")
-    print(f"HF API response: {res.text[:500]}")
-
-    if res.status_code != 200:
-        raise Exception(f"Hugging Face API failed with status {res.status_code}: {res.text}")
-
-    result = res.json()
-    if 'error' in result:
-        raise Exception(f"Hugging Face API error: {result['error']}")
-
-    return result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
-
-web3_text = generate_article(web3_article)
-ai_text = generate_article(ai_article)
+try:
+    web3_text = generate_article(web3_article)
+    ai_text = generate_article(ai_article)
+except Exception as e:
+    print(f"Error generating articles: {str(e)}")
+    raise
 
 # ========== Stable Horde 画像生成 ==========
 HORDE_API_URL = "https://stablehorde.net/api/v2/generate/async"
@@ -76,56 +88,46 @@ def generate_image(prompt, filename):
         }
     }
     headers = {"apikey": HORDE_API_KEY, "Content-Type": "application/json"}
-    res = requests.post(HORDE_API_URL, headers=headers, json=payload)
+    try:
+        res = requests.post(HORDE_API_URL, headers=headers, json=payload)
+        if res.status_code not in [200, 202]:
+            raise Exception(f"Stable Horde API failed with status {res.status_code}: {res.text}")
+        job = res.json()
+        if 'id' not in job:
+            raise Exception("Stable Horde API failed to start job")
+        job_id = job['id']
+        print(f"画像生成ジョブID: {job_id}")
+        fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
+        while True:
+            time.sleep(5)
+            status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
+            status = status_res.json()
+            if status.get("done"):
+                break
+            print("画像生成中...")
+        if not status.get("generations"):
+            raise Exception("画像生成に失敗しました")
+        img_url = status["generations"][0]["img"]
+        img_data = requests.get(img_url).content
+        img_path = f"assets/images/{filename}.png"
+        os.makedirs(os.path.dirname(img_path), exist_ok=True)
+        with open(img_path, "wb") as f:
+            f.write(img_data)
+        print(f"画像保存済み: {img_path}")
+        return img_path
+    except Exception as e:
+        raise Exception(f"Failed to generate image: {str(e)}")
 
-    if res.status_code not in [200, 202]:
-        raise Exception(f"Stable Horde API failed with status {res.status_code}: {res.text}")
-
-    job = res.json()
-    if 'id' not in job:
-        raise Exception("Stable Horde API failed to start job")
-
-    job_id = job['id']
-    print(f"画像生成ジョブID: {job_id}")
-
-    fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
-    while True:
-        time.sleep(5)
-        status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
-        status = status_res.json()
-        if status.get("done"):
-            break
-        print("画像生成中...")
-
-    if not status.get("generations"):
-        raise Exception("画像生成に失敗しました")
-
-    img_url = status["generations"][0]["img"]
-    img_data = requests.get(img_url).content
-    img_path = f"assets/images/{filename}.png"
-    os.makedirs(os.path.dirname(img_path), exist_ok=True)
-    with open(img_path, "wb") as f:
-        f.write(img_data)
-    print(f"画像保存済み: {img_path}")
-    return img_path
-
-today = datetime.now().strftime("%Y%m%d")
-web3_img = generate_image(web3_article["title"], today + "_web3")
-ai_img = generate_image(ai_article["title"], today + "_ai")
+try:
+    today = datetime.now().strftime("%Y%m%d")
+    web3_img = generate_image(web3_article["title"], today + "_web3")
+    ai_img = generate_image(ai_article["title"], today + "_ai")
+except Exception as e:
+    print(f"Error generating images: {str(e)}")
+    raise
 
 # ========== Markdown保存 ==========
 def save_markdown(filename, title, content, image_path):
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(f"""---
-layout: post
-title: "{title}"
-date: {datetime.now().strftime('%Y-%m-%d')}
----
-
-![記事画像]({image_path})
-
-{content}
-""")
-
-save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-web3.md", web3_article["title"], web3_text, web3_img)
-save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-ai.md", ai_article["title"], ai_text, ai_img)
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(f"""---
