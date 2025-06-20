@@ -1,7 +1,7 @@
 name: Auto Blog Update
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 手動実行トリガー
 
 jobs:
   update-blog:
