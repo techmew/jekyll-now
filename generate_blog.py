@@ -21,7 +21,7 @@ web3_article = fetch_latest_article(WEB3_RSS)
 ai_article = fetch_latest_article(AI_RSS)
 
 # ========== Hugging Face 記事生成 ==========
-HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 
 def generate_article(content):
