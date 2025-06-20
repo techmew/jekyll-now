@@ -37,9 +37,17 @@ def generate_article(content):
 """
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
     res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
+    
+    print(f"HF API status: {res.status_code}")
+    print(f"HF API response: {res.text[:500]}")  # 長すぎない範囲でレスポンスを表示
+    
+    if res.status_code != 200:
+        raise Exception(f"Hugging Face API failed with status {res.status_code}: {res.text}")
+    
     result = res.json()
     if 'error' in result:
         raise Exception(f"Hugging Face API error: {result['error']}")
+    
     return result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
 
 web3_text = generate_article(web3_article)
@@ -60,6 +68,9 @@ def generate_image(prompt, filename):
     }
     headers = {"apikey": HORDE_API_KEY, "Content-Type": "application/json"}
     res = requests.post(HORDE_API_URL, headers=headers, json=payload)
+    if res.status_code != 200:
+        raise Exception(f"Stable Horde API failed with status {res.status_code}: {res.text}")
+    
     job = res.json()
     if 'id' not in job:
         raise Exception("Stable Horde API failed to start job")
@@ -77,13 +88,10 @@ def generate_image(prompt, filename):
             break
         print("画像生成中...")
 
-    # 画像のURLを取得
-    gen_res = requests.get(f"https://stablehorde.net/api/v2/generate/status/{job_id}", headers={"apikey": HORDE_API_KEY})
-    gen_data = gen_res.json()
-    if not gen_data.get("generations"):
+    if not status.get("generations"):
         raise Exception("画像生成に失敗しました")
 
-    img_url = gen_data["generations"][0]["img"]
+    img_url = status["generations"][0]["img"]
     img_data = requests.get(img_url).content
     img_path = f"assets/images/{filename}.png"
     os.makedirs(os.path.dirname(img_path), exist_ok=True)
