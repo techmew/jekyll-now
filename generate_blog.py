@@ -3,7 +3,6 @@ import feedparser
 import requests
 from datetime import datetime
 import time
-from bs4 import BeautifulSoup
 
 # ========== ニュース取得 ==========
 WEB3_RSS = "https://www.blockchaingamer.biz/feed/"
@@ -18,22 +17,16 @@ def fetch_latest_article(rss_url):
         "link": latest.link
     }
 
-def clean_summary(html):
-    return BeautifulSoup(html, "html.parser").get_text()
-
 web3_article = fetch_latest_article(WEB3_RSS)
 ai_article = fetch_latest_article(AI_RSS)
 
-web3_article["summary"] = clean_summary(web3_article["summary"])
-ai_article["summary"] = clean_summary(ai_article["summary"])
-
 # ========== Hugging Face 記事生成 ==========
-HF_API_URL = "https://api-inference.huggingface.co/models/rinna/japanese-gpt2-medium"
+HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 
 def generate_article(content):
     prompt = f"""
-この文章は日本語です。次の内容について日本語で500-800字の記事を作成してください。
+次の内容について日本語で500-800字の記事を作成してください。
 ・要約（翻訳含む）
 ・私見を300字程度
 ・出典リンクを最後に記載
@@ -43,8 +36,8 @@ def generate_article(content):
 出典: {content["link"]}
 """
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
-    res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt}, timeout=60)
-
+    res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
+    
     print(f"HF API status: {res.status_code}")
     print(f"HF API response: {res.text[:500]}")
 
@@ -121,8 +114,6 @@ title: "{title}"
 date: {datetime.now().strftime('%Y-%m-%d')}
 ---
 
-# {title}
-
 ![記事画像]({image_path})
 
 {content}
@@ -130,3 +121,5 @@ date: {datetime.now().strftime('%Y-%m-%d')}
 
 save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-web3.md", web3_article["title"], web3_text, web3_img)
 save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-ai.md", ai_article["title"], ai_text, ai_img)
+
+
