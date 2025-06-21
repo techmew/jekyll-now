@@ -13,10 +13,11 @@ def clean_generated_text(text):
         r"私見を.*?",
         r"出典リンクを.*?",
         r"500～800字",
-        r"記事例.*?(参考：|$)"
+        r"記事例.*?(参考：|$)",
+        r"情報：.*?(参考：|$)"
     ]
     for phrase in unwanted_phrases:
-        text = re.sub(phrase, "", text, flags=re.MULTILINE)
+        text = re.sub(phrase, "", text, flags=re.MULTILINE | re.DOTALL)
     if re.search(r"[a-zA-Z\s]{20,}", text):
         print("警告: 生成テキストに英語が含まれています")
     return text.strip()
@@ -46,52 +47,15 @@ except Exception as e:
     print(f"Error fetching articles: {str(e)}")
     raise
 
-# ========== Hugging Face 記事生成 ==========
-# 代替モデル（クレジット制限回避のため）
-HF_API_URL = "https://api-inference.huggingface.co/models/mixtral/mixtral-8x7b-instruct-v0.1"
-HF_API_TOKEN = os.getenv("HF_API_TOKEN")
-
-if not HF_API_TOKEN:
-    raise Exception("HF_API_TOKEN is empty or not set! Check your GitHub Secrets.")
-
-def generate_article(content):
-    prompt = f"""
-    以下の情報を基に、20～30代のテック好きが読むブログ記事を、超カジュアルな日本語で書いてしてください。友だちと話してるみたいなノリで、500～800字くらい。まず、英語のタイトルと要約を自然な日本語に翻訳して、記事のポイントをサクッとまとめ。次に、その話題についてあなたの思うことやワクワクするポイントを気楽に語って。最後に「参考：」で出典リンクを入れて。指示っぽい言葉（「要約」「感想」など）は絶対入れないで、めっちゃ自然な感じで！
-
-    例：
-    タイトル: "AI Revolutionizes Gaming"
-    要約: AIがゲームのキャラクターモーションをリアルタイム生成。
-    記事例: 最近、AIがゲーム開発にめっちゃ革命起こしてるって！キャラの動きをリアルタイムで作れる技術が出てきて、開発がめっちゃ速くなるらしい。マジでスゴいよね！これならインディー開発者でもバッチリなゲーム作れそう。ただ、AIに頼りすぎるとゲームの「味」がなくなるかも？そこはちょっと気になるかな。
-    参考: [リンク]
-
-    情報：
-    タイトル: {content["title"]}
-    要約: {content["summary"]}
-    出典リンク: {content["link"]}
-    """
-    headers = {
-        "Authorization": f"Bearer {HF_API_TOKEN}",
-        "Content-Type": "application/json"
-    }
-    try:
-        res = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt})
-        print(f"HF API status: {res.status_code}")
-        print(f"HF API response: {res.text[:500]}")
-        if res.status_code != 200:
-            raise Exception(f"Hugging Face API failed with status {res.status_code}: {res.text}")
-        result = res.json()
-        if 'error' in result:
-            raise Exception(f"Hugging Face API error: {result['error']}")
-        generated_text = result[0]['generated_text'] if isinstance(result, list) else result['generated_text']
-        return clean_generated_text(generated_text)
-    except Exception as e:
-        raise Exception(f"Failed to generate article: {str(e)}")
-
+# ========== 記事テキストはColabで生成済みと仮定 ==========
+# 例: _gorok.pyで生成したテキストを読み込む
 try:
-    web3_text = generate_article(web3_article)
-    ai_text = generate_article(ai_article)
+    with open("web3_article.txt", "r", encoding="utf-8") as f:
+        web3_text = clean_generated_text(f.read())
+    with open("ai_article.txt", "r", encoding="utf-8") as f:
+        ai_text = clean_generated_text(f.read())
 except Exception as e:
-    print(f"Error generating articles: {str(e)}")
+    print(f"Error reading article files: {str(e)}")
     raise
 
 # ========== Stable Horde 画像生成 ==========
@@ -102,7 +66,7 @@ if not HORDE_API_KEY:
     raise Exception("HORDE_API_KEY is empty or not set! Check your GitHub Secrets.")
 
 def generate_image(prompt, filename):
-    image_prompt = f"A vibrant digital art representing {prompt} in a futuristic style"
+    image_prompt = f"A vibrant digital illustration of {prompt} in a futuristic cyberpunk style"
     payload = {
         "prompt": image_prompt,
         "params": {
@@ -122,7 +86,7 @@ def generate_image(prompt, filename):
         job_id = job['id']
         print(f"画像生成ジョブID: {job_id}")
         fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
-        max_attempts = 24  # 120秒待機（Stable Hordeは遅い場合あり）
+        max_attempts = 24  # 120秒待機
         for _ in range(max_attempts):
             time.sleep(5)
             status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
