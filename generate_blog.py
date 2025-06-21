@@ -47,13 +47,17 @@ except Exception as e:
     print(f"Error fetching articles: {str(e)}")
     raise
 
-# ========== 記事テキストはColabで生成済みと仮定 ==========
-# 例: _gorok.pyで生成したテキストを読み込む
+# ========== 記事テキスト読み込み（Colab生成済み） ==========
+def read_article_file(filename, fallback_text="記事生成に失敗しました。後で再試行してください。"):
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return clean_generated_text(f.read())
+    print(f"警告: {filename} が見つかりません。フォールバックテキストを使用。")
+    return fallback_text
+
 try:
-    with open("web3_article.txt", "r", encoding="utf-8") as f:
-        web3_text = clean_generated_text(f.read())
-    with open("ai_article.txt", "r", encoding="utf-8") as f:
-        ai_text = clean_generated_text(f.read())
+    web3_text = read_article_file("web3_article.txt")
+    ai_text = read_article_file("ai_article.txt")
 except Exception as e:
     print(f"Error reading article files: {str(e)}")
     raise
@@ -89,57 +93,4 @@ def generate_image(prompt, filename):
         max_attempts = 24  # 120秒待機
         for _ in range(max_attempts):
             time.sleep(5)
-            status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
-            status = status_res.json()
-            if status.get("done"):
-                break
-            print("画像生成中...")
-        else:
-            raise Exception("画像生成がタイムアウトしました")
-        if not status.get("generations"):
-            raise Exception("画像生成に失敗しました")
-        img_url = status["generations"][0]["img"]
-        img_data = requests.get(img_url).content
-        img_path = f"assets/images/{filename}.png"
-        os.makedirs(os.path.dirname(img_path), exist_ok=True)
-        with open(img_path, "wb") as f:
-            f.write(img_data)
-        print(f"画像保存済み: {img_path}")
-        return img_path
-    except Exception as e:
-        raise Exception(f"Failed to generate image: {str(e)}")
-
-try:
-    today = datetime.now().strftime("%Y%m%d")
-    web3_img = generate_image(web3_article["title"], today + "_web3")
-    ai_img = generate_image(ai_article["title"], today + "_ai")
-except Exception as e:
-    print(f"Error generating images: {str(e)}")
-    raise
-
-# ========== Markdown保存 ==========
-def save_markdown(filename, title, content, image_path):
-    try:
-        escaped_title = title.replace('"', '\\"')
-        markdown_content = f"""---
-layout: post
-title: "{escaped_title}"
-date: {datetime.now().strftime('%Y-%m-%d')}
----
-
-![記事画像]({image_path})
-
-{content}
-"""
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(markdown_content)
-        print(f"Markdown保存済み: {filename}")
-    except Exception as e:
-        raise Exception(f"Failed to save markdown: {str(e)}")
-
-try:
-    save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-web3.md", web3_article["title"], web3_text, web3_img)
-    save_markdown(f"_posts/{datetime.now().strftime('%Y-%m-%d')}-ai.md", ai_article["title"], ai_text, ai_img)
-except Exception as e:
-    print(f"Error saving markdown: {str(e)}")
-    raise
+            status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY-controlled access to Grok, created by xAI.
