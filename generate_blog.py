@@ -7,18 +7,17 @@ import time
 
 # ========== テキスト後処理 ==========
 def clean_generated_text(text):
-    # 指示文や不要なフレーズを削除
     unwanted_phrases = [
         r"次の内容について日本語で.*?",
         r"要約（翻訳含む）",
         r"私見を.*?",
         r"出典リンクを.*?",
-        r"500～800字"
+        r"500～800字",
+        r"記事例.*?(参考：|$)"
     ]
     for phrase in unwanted_phrases:
         text = re.sub(phrase, "", text, flags=re.MULTILINE)
-    # 英語が混入している場合、警告
-    if re.search(r"[a-zA-Z]{5,}", text):
+    if re.search(r"[a-zA-Z\s]{20,}", text):
         print("警告: 生成テキストに英語が含まれています")
     return text.strip()
 
@@ -48,7 +47,8 @@ except Exception as e:
     raise
 
 # ========== Hugging Face 記事生成 ==========
-HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+# 代替モデル（クレジット制限回避のため）
+HF_API_URL = "https://api-inference.huggingface.co/models/mixtral/mixtral-8x7b-instruct-v0.1"
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 
 if not HF_API_TOKEN:
@@ -56,12 +56,12 @@ if not HF_API_TOKEN:
 
 def generate_article(content):
     prompt = f"""
-    以下の情報を基に、親しみやすい日本語でブログ記事を書いてください。まるで友人に話すようなカジュアルな口調で、500～800字程度。まず、英語のタイトルと要約を自然な日本語に翻訳し、記事の要点を簡潔にまとめ、次にその話題についてのあなたの考えや感想を自然に述べて、最後に「参考：」と出典リンクを記載してください。指示文や「要約」「感想」といった言葉は記事に含めないでください。
+    以下の情報を基に、20～30代のテック好きが読むブログ記事を、超カジュアルな日本語で書いてしてください。友だちと話してるみたいなノリで、500～800字くらい。まず、英語のタイトルと要約を自然な日本語に翻訳して、記事のポイントをサクッとまとめ。次に、その話題についてあなたの思うことやワクワクするポイントを気楽に語って。最後に「参考：」で出典リンクを入れて。指示っぽい言葉（「要約」「感想」など）は絶対入れないで、めっちゃ自然な感じで！
 
     例：
     タイトル: "AI Revolutionizes Gaming"
     要約: AIがゲームのキャラクターモーションをリアルタイム生成。
-    記事例: 最近、AIがゲーム開発にすごい影響を与えてるってニュースを見ました！ゲームのキャラがリアルタイムで自然に動く技術が登場して、開発時間がめっちゃ短縮されるらしい。これ、めっちゃ面白いよね！インディーゲームでも大作みたいなクオリティが出せるかも。ただ、AIに頼りすぎるとゲームの魂が薄れちゃうかもね。
+    記事例: 最近、AIがゲーム開発にめっちゃ革命起こしてるって！キャラの動きをリアルタイムで作れる技術が出てきて、開発がめっちゃ速くなるらしい。マジでスゴいよね！これならインディー開発者でもバッチリなゲーム作れそう。ただ、AIに頼りすぎるとゲームの「味」がなくなるかも？そこはちょっと気になるかな。
     参考: [リンク]
 
     情報：
@@ -102,7 +102,7 @@ if not HORDE_API_KEY:
     raise Exception("HORDE_API_KEY is empty or not set! Check your GitHub Secrets.")
 
 def generate_image(prompt, filename):
-    image_prompt = f"A futuristic illustration of {prompt}"
+    image_prompt = f"A vibrant digital art representing {prompt} in a futuristic style"
     payload = {
         "prompt": image_prompt,
         "params": {
@@ -122,7 +122,7 @@ def generate_image(prompt, filename):
         job_id = job['id']
         print(f"画像生成ジョブID: {job_id}")
         fetch_url = f"https://stablehorde.net/api/v2/generate/status/{job_id}"
-        max_attempts = 12  # 60秒待機
+        max_attempts = 24  # 120秒待機（Stable Hordeは遅い場合あり）
         for _ in range(max_attempts):
             time.sleep(5)
             status_res = requests.get(fetch_url, headers={"apikey": HORDE_API_KEY})
